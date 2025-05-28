@@ -1,0 +1,187 @@
+/*
+  Acest sketch controleaza un semafor LED, un buzzer si un ventilator
+  Foloseste butoanele pe pini digitali configurati cu pull-up prin registre
+  Exista trei moduri principale:
+    1. Incalzire    (BUTTON1) - porneste semaforul de la verde spre rosu si opreste ventilatorul
+    2. Racire       (BUTTON2) - porneste semaforul si porneste ventilatorul
+    3. Mentenanta   (BUTTON3) - opreste semaforul si permite reglaj manual al temperaturii
+  In modul mentenanta, butoanele BUTTON4 si BUTTON5 pot modifica temperatura dorita
+  Semaforul trece automat:
+    - verde  pentru primele 10s (buzzer 500Hz)
+    - galben  pentru urmatoarele 10s (buzzer 1000Hz)
+    - rosu    dupa 20s, pana la noua comanda (buzzer 1500Hz)
+*/
+
+// ==== PIN-OUT ====
+const int BUTTON1 = 2;  // Incalzire
+const int BUTTON2 = 3;  // Racire
+const int BUTTON3 = 4;  // Mentenanta
+const int BUTTON4 = 5;  // – in mentenanta (scade dorita)
+const int BUTTON5 = 6;  // + in mentenanta (creste dorita)
+
+const int TEMP_SENSOR_PIN = A0;  // Pin analogic pentru senzor temperatura
+
+const int LED_GREEN  = 11;  // LED verde semafor
+const int LED_YELLOW = 10;  // LED galben semafor
+const int LED_RED    = 9;   // LED rosu semafor
+
+const int BUZZER_PIN = 8;   // Buzzer semnalizare
+const int FAN_PIN    = 12;  // Ventilator
+
+// ==== STATE ====
+bool semaforActive     = false;      // true daca semaforul este pornit
+unsigned long startTime = 0;         // momentul la care semaforul a fost (re)pornit
+bool reglareActivata   = false;      // true daca suntem in modul mentenanta
+
+float temperatureC     = 0.0;        // temperatura curenta masurata
+float temperaturaDorita = 0.0;       // temperatura setata in modul mentenanta
+
+void setup() {
+  // Configureaza butoanele ca intrari cu pull-up folosind registre
+  DDRD  &= ~(_BV(PD2) | _BV(PD3) | _BV(PD4) | _BV(PD5) | _BV(PD6));
+  PORTD |=  (_BV(PD2) | _BV(PD3) | _BV(PD4) | _BV(PD5) | _BV(PD6));
+
+  // Configureaza restul pinilor cu functii Arduino
+  pinMode(LED_GREEN, OUTPUT);
+  pinMode(LED_YELLOW, OUTPUT);
+  pinMode(LED_RED, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(FAN_PIN, OUTPUT);
+
+  Serial.begin(9600);  // Initializeaza comunicarea seriala
+}
+
+void loop() {
+  // Citeste temperatura de la senzor (TMP36-like)
+  int raw = analogRead(TEMP_SENSOR_PIN);
+  float voltage = raw * (5.0 / 1023.0);
+  temperatureC = (voltage - 0.5) * 100.0;
+
+  // --- BUTTON1: Incalzire ---
+  // Reseteaza modul mentenanta si porneste semafor, opreste ventilator
+  if (!(PIND & _BV(PD2))) {
+    reglareActivata = false;
+    semaforActive = true;
+    startTime = millis();
+    digitalWrite(FAN_PIN, LOW);
+    Serial.print("Temperatura curenta in camera: ");
+    Serial.print(temperatureC);
+    Serial.println(" °C, se porneste incalzirea.");
+    delay(300);
+  }
+
+  // --- BUTTON2: Racire ---
+  // Reseteaza modul mentenanta si porneste semafor, porneste ventilator
+  if (!(PIND & _BV(PD3))) {
+    reglareActivata = false;
+    semaforActive = true;
+    startTime = millis();
+    digitalWrite(FAN_PIN, HIGH);
+    Serial.print("Temperatura curenta in camera: ");
+    Serial.print(temperatureC);
+    Serial.println(" °C, se porneste ventilatorul.");
+    delay(300);
+  }
+
+  // --- BUTTON3: Mentenanta ---
+  // Opreste semaforul si buzzerul, activeaza modul reglare manuala
+  if (!(PIND & _BV(PD4))) {
+    reglareActivata = true;
+    semaforActive = false;
+    noTone(BUZZER_PIN);
+    digitalWrite(LED_GREEN, LOW);
+    digitalWrite(LED_YELLOW, LOW);
+    digitalWrite(LED_RED, LOW);
+    digitalWrite(FAN_PIN, LOW);
+
+    Serial.print("Temperatura curenta in camera: ");
+    Serial.print(temperatureC);
+    Serial.println(" °C");
+    Serial.println("Apasa buton 4 pentru a scadea temperatura dorita.");
+    Serial.println("Apasa buton 5 pentru a creste temperatura dorita.");
+
+    temperaturaDorita = temperatureC;
+    delay(300);
+  }
+
+  // --- BUTTON5: + in mentenanta ---
+  // Creste setarea daca modul mentenanta este activ
+  if (!(PIND & _BV(PD6))) {
+    if (reglareActivata) {
+      temperaturaDorita += 1;
+      delay(300);
+      afiseazaReglaj();
+    } else {
+      Serial.println("Modul mentinere nu a fost selectat");
+      delay(300);
+    }
+  }
+
+  // --- BUTTON4: - in mentenanta ---
+  // Scade setarea daca modul mentenanta este activ
+  if (!(PIND & _BV(PD5))) {
+    if (reglareActivata) {
+      temperaturaDorita -= 1;
+      delay(300);
+      afiseazaReglaj();
+    } else {
+      Serial.println("Modul mentinere nu a fost selectat");
+      delay(300);
+    }
+  }
+
+  // --- Semafor + Buzzer ---
+  if (semaforActive) {
+    unsigned long elapsed = millis() - startTime;
+
+    if (elapsed < 10000) {
+      // Verde intre 0 si 10s
+      digitalWrite(LED_GREEN, HIGH);
+      digitalWrite(LED_YELLOW, LOW);
+      digitalWrite(LED_RED, LOW);
+      tone(BUZZER_PIN, 500);
+    }
+    else if (elapsed < 20000) {
+      // Galben intre 10 si 20s
+      digitalWrite(LED_GREEN, LOW);
+      digitalWrite(LED_YELLOW, HIGH);
+      digitalWrite(LED_RED, LOW);
+      tone(BUZZER_PIN, 1000);
+    }
+    else {
+      // Rosu dupa 20s pana la noua comanda
+      digitalWrite(LED_GREEN, LOW);
+      digitalWrite(LED_YELLOW, LOW);
+      digitalWrite(LED_RED, HIGH);
+      tone(BUZZER_PIN, 1500);
+    }
+  } else {
+    // Cand semaforul nu e activ, opreste buzzer si LED-uri
+    noTone(BUZZER_PIN);
+    digitalWrite(LED_GREEN, LOW);
+    digitalWrite(LED_YELLOW, LOW);
+    digitalWrite(LED_RED, LOW);
+  }
+}
+
+// Afiseaza in serial starea si porneste/opreste ventilatorul in functie de diferenta
+void afiseazaReglaj() {
+  Serial.print("Temperatura dorita setata la: ");
+  Serial.print(temperaturaDorita);
+  Serial.print(" °C, temperatura in camera: ");
+  Serial.print(temperatureC);
+  Serial.println(" °C");
+
+  if (temperaturaDorita < temperatureC) {
+    digitalWrite(FAN_PIN, HIGH);
+    Serial.println("Temperatura este prea mare. Se porneste ventilatorul.");
+  }
+  else if (temperaturaDorita > temperatureC) {
+    digitalWrite(FAN_PIN, LOW);
+    Serial.println("Temperatura este prea mica. Se porneste incalzirea.");
+  }
+  else {
+    digitalWrite(FAN_PIN, LOW);
+    Serial.println("Temperatura este optima. Nu se porneste nimic.");
+  }
+}
