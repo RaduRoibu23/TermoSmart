@@ -44,7 +44,6 @@
 
 ===== Hardware Design =====
 
-{{:pm:prj2025:rnedelcu:poza_pm_circuit_hard.jpg?450|}}
 
 <note tip>
 
@@ -71,7 +70,6 @@
 </note>
 
 
-{{:pm:prj2025:rnedelcu:poza_buna_hard.png?450|}}{{:pm:prj2025:rnedelcu:schemablockradu.png?450|}}
 
 ===== Software Design =====
 
@@ -108,24 +106,3 @@ In urma realizarii proiectului, software-ul implementat functioneaza conform spe
 ===== Concluzii =====
 
 * Proiectul s-a dovedit provocator din punct de vedere hardware si mediu din punct de vedere software. Cu toate acestea, am reusit sa finalizam ambele componente cu succes. Am dedicat aproximativ 45 de ore acestui proiect si nu am intampinat probleme majore, cum ar fi defectarea componentelor hardware. In concluzie, am obtinut un proiect functional la standardele dorite.
-===== Download =====
-
-<note warning>
-O arhivă (sau mai multe dacă este cazul) cu fişierele obţinute în urma realizării proiectului: surse, scheme, etc. Un fişier README, un ChangeLog, un script de compilare şi copiere automată pe uC crează întotdeauna o impresie bună ;-).
-
-Fişierele se încarcă pe wiki folosind facilitatea *Add Images or other files. Namespace-ul în care se încarcă fişierele este de tipul **:pm:prj20??:c?* sau *:pm:prj20??:c?:nume_student* (dacă este cazul). *Exemplu:* Dumitru Alin, 331CC -> *:pm:prj2009:cc:dumitru_alin*.
-</note>
-
-===== Jurnal =====
-
-<note tip>
-Puteți avea și o secțiune de jurnal în care să poată urmări asistentul de proiect progresul proiectului.
-</note>
-
-===== Bibliografie/Resurse =====
-
-<note>
-Listă cu documente, datasheet-uri, resurse Internet folosite, eventual grupate pe *Resurse Software* şi *Resurse Hardware*.
-</note>
-
-<html><a class="media mediafile mf_pdf" href="?do=export_pdf">Export to PDF</a></html>
